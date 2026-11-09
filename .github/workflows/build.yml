@@ -61,7 +61,7 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           gh release create "$env:RELEASE_TAG" `
-            "./driverguard/publish/DriverGuard.exe" `
+            "./publish/DriverGuard.exe" `
             --target "${{ github.sha }}" `
             --title "DriverGuard $env:RELEASE_TAG" `
             --generate-notes `
