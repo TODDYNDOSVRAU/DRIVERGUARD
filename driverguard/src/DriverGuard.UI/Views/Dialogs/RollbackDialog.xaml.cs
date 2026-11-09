@@ -1,5 +1,8 @@
 using System.Windows;
 using DriverGuard.Core.Interfaces;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxImage = System.Windows.MessageBoxImage;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 using DriverGuard.Core.Models;
 using Wpf.Ui.Controls;
 

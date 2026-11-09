@@ -1,5 +1,9 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Media;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxImage = System.Windows.MessageBoxImage;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 using DriverGuard.Core.Enums;
 using DriverGuard.Core.Interfaces;
 using DriverGuard.Core.Models;
@@ -59,7 +63,7 @@ public partial class FolderDriverDialog : FluentWindow
                 // Nenhum driver compatível com o Hardware ID
                 BdrSignatureStatus.Background = new SolidColorBrush(Color.FromArgb(40, 255, 59, 48));
                 BdrSignatureStatus.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 59, 48));
-                IcoSignature.Symbol = SymbolIcon.Dismiss24;
+                IcoSignature.Symbol = SymbolRegular.Dismiss24;
                 IcoSignature.Foreground = new SolidColorBrush(Color.FromRgb(255, 59, 48));
                 TxtSignatureTitle.Text = "Incompatível com o Dispositivo";
                 TxtSignatureTitle.Foreground = new SolidColorBrush(Color.FromRgb(255, 59, 48));
@@ -80,7 +84,7 @@ public partial class FolderDriverDialog : FluentWindow
             {
                 BdrSignatureStatus.Background = new SolidColorBrush(Color.FromArgb(30, 16, 124, 65));
                 BdrSignatureStatus.BorderBrush = new SolidColorBrush(Color.FromRgb(16, 124, 65));
-                IcoSignature.Symbol = SymbolIcon.ShieldCheckmark24;
+                IcoSignature.Symbol = SymbolRegular.ShieldCheckmark24;
                 IcoSignature.Foreground = new SolidColorBrush(Color.FromRgb(16, 124, 65));
                 TxtSignatureTitle.Text = sig.IsWhqlCertified ? "Assinatura Válida (WHQL Homologado)" : "Assinatura Válida (Catálogo Oficial)";
                 TxtSignatureTitle.Foreground = new SolidColorBrush(Color.FromRgb(16, 124, 65));
@@ -94,7 +98,7 @@ public partial class FolderDriverDialog : FluentWindow
             {
                 BdrSignatureStatus.Background = new SolidColorBrush(Color.FromArgb(40, 255, 59, 48));
                 BdrSignatureStatus.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 59, 48));
-                IcoSignature.Symbol = SymbolIcon.ShieldDismiss24;
+                IcoSignature.Symbol = SymbolRegular.ShieldDismiss24;
                 IcoSignature.Foreground = new SolidColorBrush(Color.FromRgb(255, 59, 48));
                 TxtSignatureTitle.Text = "Assinatura Digital Inválida ou Ausente";
                 TxtSignatureTitle.Foreground = new SolidColorBrush(Color.FromRgb(255, 59, 48));
