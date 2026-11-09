@@ -101,14 +101,14 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (SetField(ref _isBusy, value))
             {
-                (RefreshInventoryCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (CheckUpdatesCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (InspectFolderDriverCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (InstallSelectedCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (RollbackDeviceCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (CancelOperationCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (RefreshHistoryCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (ExportCsvCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (RefreshInventoryCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (CheckUpdatesCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (InspectFolderDriverCommand as RelayCommand)?.NotifyCanExecuteChanged();
+                (InstallSelectedCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (RollbackDeviceCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (CancelOperationCommand as RelayCommand)?.NotifyCanExecuteChanged();
+                (RefreshHistoryCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (ExportCsvCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
             }
         }
     }
@@ -248,9 +248,9 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (SetField(ref _selectedDevice, value))
             {
-                (InspectFolderDriverCommand as RelayCommand)?.RaiseCanExecuteChanged();
-                (InstallSelectedCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
-                (RollbackDeviceCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+                (InspectFolderDriverCommand as RelayCommand)?.NotifyCanExecuteChanged();
+                (InstallSelectedCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
+                (RollbackDeviceCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(SelectedDeviceCandidate));
             }
         }
@@ -494,7 +494,7 @@ public class MainViewModel : INotifyPropertyChanged
             DisplayedHistory.Add(r);
         }
 
-        (ExportCsvCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+        (ExportCsvCommand as AsyncRelayCommand)?.NotifyCanExecuteChanged();
     }
 
     public async Task ExportHistoryToCsvAsync()
