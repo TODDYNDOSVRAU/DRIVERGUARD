@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:conv="clr-namespace:DriverGuard.UI.Converters"
         xmlns:vm="clr-namespace:DriverGuard.UI.ViewModels"
         xmlns:enums="clr-namespace:DriverGuard.Core.Enums;assembly=DriverGuard.Core"
         mc:Ignorable="d"
@@ -11,6 +12,10 @@
         Height="880" Width="1380"
         MinHeight="640" MinWidth="1040"
         WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:NullToVisibilityConverter x:Key="NullToVis" />
+    </Window.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -324,7 +329,7 @@
 
                     <!-- Banner de Atualização Disponível -->
                     <Border Background="#1A107C41" BorderBrush="#FF107C41" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,4,0,8"
-                            Visibility="{Binding SelectedDeviceCandidate, Converter={x:Null}}">
+                            Visibility="{Binding SelectedDeviceCandidate, Converter={StaticResource NullToVis}}">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
@@ -411,7 +416,7 @@
                              Maximum="100"
                              Height="10"
                              VerticalAlignment="Center"
-                             Visibility="{Binding IsBusy, Converter={x:Null}}" />
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
             </Grid>
         </Border>
     </Grid>
