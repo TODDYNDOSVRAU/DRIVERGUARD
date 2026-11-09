@@ -132,8 +132,10 @@ public class RollbackAndInstallationTests
         var mockBackup = new DummyBackupService();
         var mockReboot = new DummyRebootDetector(isRebootPending);
         var mockInventory = new DummyInventoryService();
+        var mockHistory = new DummyHistoryRepository();
+        var mockNotify = new DummyNotificationService();
 
-        return new PnpUtilInstallerService(mockRestore, mockBackup, mockReboot, mockInventory);
+        return new PnpUtilInstallerService(mockRestore, mockBackup, mockReboot, mockInventory, mockHistory, mockNotify);
     }
 
     private class DummyRestoreService : ISystemRestoreService
@@ -176,5 +178,23 @@ public class RollbackAndInstallationTests
 
         public Task<PnpDevice?> GetDeviceByIdAsync(string deviceId, CancellationToken cancellationToken = default)
             => Task.FromResult<PnpDevice?>(new PnpDevice { DeviceId = deviceId, Name = "Mock", ConfigManagerErrorCode = 0 });
+    }
+
+    private class DummyHistoryRepository : IHistoryRepository
+    {
+        public Task AddRecordAsync(OperationHistoryRecord record) => Task.CompletedTask;
+        public Task<IReadOnlyList<OperationHistoryRecord>> GetAllRecordsAsync()
+            => Task.FromResult<IReadOnlyList<OperationHistoryRecord>>(Array.Empty<OperationHistoryRecord>());
+        public Task<IReadOnlyList<OperationHistoryRecord>> GetFilteredRecordsAsync(
+            string? searchQuery = null, DateTime? startDate = null, DateTime? endDate = null, string? resultStatus = null)
+            => Task.FromResult<IReadOnlyList<OperationHistoryRecord>>(Array.Empty<OperationHistoryRecord>());
+    }
+
+    private class DummyNotificationService : INotificationService
+    {
+        public void ShowInstallationFailedToast(string deviceName, string error) { }
+        public void ShowRollbackExecutedToast(string deviceName, string rolledBackVersion, bool isAutomatic) { }
+        public void ShowInvalidSignatureToast(string deviceName, string reason) { }
+        public void ShowDeviceInErrorToast(string deviceName, uint errorCode, string description) { }
     }
 }

@@ -63,7 +63,8 @@ public class DeviceInventoryTests
     public void MainViewModel_FilteringByHardwareId_MatchesAccurately()
     {
         var mockService = new DummyInventoryService();
-        var vm = new MainViewModel(mockService);
+        // Só os filtros são testados aqui: as demais dependências não são usadas por este teste
+        var vm = new MainViewModel(mockService, null!, null!, null!, null!, null!, null!);
 
         // Dispara filtros com texto de busca
         vm.SearchText = "VEN_8086";
