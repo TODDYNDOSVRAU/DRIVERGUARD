@@ -21,7 +21,7 @@ public class PnpDevice
     public string InfName { get; init; } = string.Empty;
 
     public uint ConfigManagerErrorCode { get; init; }
-    public string StatusDescription => ConfigManagerErrorCode.GetDescription(ConfigManagerErrorCode);
+    public string StatusDescription => DriverGuard.Core.Enums.ConfigManagerErrorCode.GetDescription(ConfigManagerErrorCode);
     public bool HasProblem => ConfigManagerErrorCode != 0;
 
     public DeviceStatus Status { get; set; } = DeviceStatus.NotVerified;
