@@ -29,7 +29,8 @@ public class MainViewModel : INotifyPropertyChanged
     private CancellationTokenSource? _cancellationTokenSource;
 
     private bool _isBusy;
-    private bool _isSimulationMode = false;
+    // Começa em simulação: o primeiro clique não deve alterar o DriverStore sem o usuário ter escolhido o modo real
+    private bool _isSimulationMode = true;
     private string _statusMessage = "Pronto para iniciar auditoria de dispositivos.";
     private string _currentProgressDevice = string.Empty;
     private int _progressCurrent;

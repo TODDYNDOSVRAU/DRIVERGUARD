@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography.Pkcs;
 using DriverGuard.Core.Enums;
 using DriverGuard.Core.Interfaces;
 using DriverGuard.Core.Models;
@@ -8,7 +8,7 @@ using Serilog;
 namespace DriverGuard.Infrastructure.Security;
 
 /// <summary>
-/// Serviço de validação criptográfica utilizando a API nativa WinVerifyTrust e análise de certificados X509.
+/// Serviço de validação criptográfica utilizando a API nativa WinVerifyTrust e leitura do signatário via PKCS#7.
 /// </summary>
 public class WinVerifyTrustService : ISignatureVerificationService
 {
@@ -53,20 +53,15 @@ public class WinVerifyTrustService : ISignatureVerificationService
                 dwUIContext = 0
             };
 
+            // Para catálogos de driver a ação correta é DRIVER_ACTION_VERIFY.
+            // Não há fallback para a ação Authenticode genérica: ela não valida catálogos de driver
+            // e aceitaria arquivos que o Windows rejeitaria.
             var actionId = WinVerifyTrustNative.DRIVER_ACTION_VERIFY;
             int result = WinVerifyTrustNative.WinVerifyTrust(IntPtr.Zero, ref actionId, ref trustData);
 
-            if (result != 0)
-            {
-                // Tenta fallback com a ação genérica Authenticode caso DRIVER_ACTION_VERIFY requeira catálogo instalado
-                var genericActionId = WinVerifyTrustNative.WINTRUST_ACTION_GENERIC_VERIFY_V2;
-                result = WinVerifyTrustNative.WinVerifyTrust(IntPtr.Zero, ref genericActionId, ref trustData);
-            }
-
             if (result == 0)
             {
-                // Extrai metadados do certificado X509
-                return ExtractCertificateInfo(filePath, true);
+                return ExtractSignerInfo(filePath);
             }
 
             uint errorCode = (uint)result;
@@ -127,21 +122,34 @@ public class WinVerifyTrustService : ISignatureVerificationService
         }
 
         // Valida o catálogo .cat via WinVerifyTrust
-        var catResult = VerifyFileSignature(targetCatalog);
-        return catResult;
+        return VerifyFileSignature(targetCatalog);
     }
 
-    private SignatureVerificationResult ExtractCertificateInfo(string filePath, bool isValid)
+    /// <summary>
+    /// Lê o certificado do signatário a partir do próprio catálogo (PKCS#7).
+    /// X509Certificate2 não serve aqui: um .cat não é um certificado.
+    /// </summary>
+    private SignatureVerificationResult ExtractSignerInfo(string catalogPath)
     {
         try
         {
-            using var cert = new X509Certificate2(filePath);
-            string subject = cert.Subject;
-            string issuer = cert.Issuer;
-            string thumbprint = cert.Thumbprint;
+            var cms = new SignedCms();
+            cms.Decode(File.ReadAllBytes(catalogPath));
+
+            var signer = cms.SignerInfos.Count > 0 ? cms.SignerInfos[0].Certificate : null;
+            if (signer == null)
+            {
+                return SignatureVerificationResult.Invalid(
+                    SignatureStatus.InvalidSignature,
+                    "O catálogo não contém o certificado do signatário.");
+            }
+
+            string subject = signer.Subject;
+            string issuer = signer.Issuer;
+            string thumbprint = signer.Thumbprint;
 
             bool isWhql = false;
-            foreach (var ext in cert.Extensions)
+            foreach (var ext in signer.Extensions)
             {
                 if (ext.Oid?.Value == WinVerifyTrustNative.OID_WHQL_CRYPTO ||
                     ext.Oid?.Value == WinVerifyTrustNative.OID_WHQL_WINDOWS ||
@@ -153,13 +161,17 @@ public class WinVerifyTrustService : ISignatureVerificationService
                 }
             }
 
-            _logger.Information("Assinatura validada com sucesso para {FilePath}. Signer: {Signer}, WHQL: {IsWhql}", filePath, subject, isWhql);
-            return SignatureVerificationResult.Valid(subject, issuer, thumbprint, isWhql, filePath);
+            _logger.Information("Assinatura validada com sucesso para {FilePath}. Signer: {Signer}, WHQL: {IsWhql}", catalogPath, subject, isWhql);
+            return SignatureVerificationResult.Valid(subject, issuer, thumbprint, isWhql, catalogPath);
         }
         catch (Exception ex)
         {
-            _logger.Warning(ex, "Certificado validado por WinVerifyTrust, mas ocorreu erro ao ler detalhes X509 de {FilePath}", filePath);
-            return SignatureVerificationResult.Valid("Certificado Válido", "Autoridade Confiável", string.Empty, false, filePath);
+            // WinVerifyTrust já aprovou o catálogo; se não conseguimos ler o signatário,
+            // reportamos isso como erro em vez de inventar metadados.
+            _logger.Error(ex, "Não foi possível ler o signatário do catálogo {Path}", catalogPath);
+            return SignatureVerificationResult.Invalid(
+                SignatureStatus.InvalidSignature,
+                "Não foi possível ler o certificado do signatário do catálogo.");
         }
     }
 

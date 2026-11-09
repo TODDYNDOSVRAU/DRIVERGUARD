@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using DriverGuard.Core.Interfaces;
 using DriverGuard.Core.Models;
 using Serilog;
@@ -130,7 +129,7 @@ public class PnpUtilInstallerService : IDriverInstallerService
         // 5. Ponto de Restauração
         var restoreResult = await _restoreService.CreateRestorePointAsync($"DriverGuard: {device.Name} ({candidate.NewVersion})");
 
-        // 6. Backup Atômico do DriverStore
+        // 6. Backup do driver atual (somente o pacote do dispositivo)
         var backup = await _backupService.ExportCurrentDriverAsync(device, false);
         if (backup == null)
         {
@@ -142,135 +141,102 @@ public class PnpUtilInstallerService : IDriverInstallerService
         }
 
         // 7. Execução do pnputil /add-driver /install
-        return await Task.Run(async () =>
+        PnpUtilRunner.PnpUtilResult installResult;
+        try
         {
-            int exitCode = -1;
-            string stdout = string.Empty;
+            installResult = await PnpUtilRunner.RunAsync($"/add-driver \"{pkg.InfPath}\" /install", 90000);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Falha ao executar pnputil para instalação.");
+            installResult = new PnpUtilRunner.PnpUtilResult(-1, string.Empty, ex.Message, false);
+        }
 
-            try
+        int exitCode = installResult.ExitCode;
+        bool processSuccess = exitCode == 0 || exitCode == 3010;
+        uint postInstallError = 0;
+
+        if (processSuccess)
+        {
+            await Task.Delay(2500, cancellationToken);
+            var auditedDevice = await _inventoryService.GetDeviceByIdAsync(device.DeviceId, cancellationToken);
+            if (auditedDevice != null)
             {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "pnputil.exe",
-                    Arguments = $"/add-driver \"{pkg.InfPath}\" /install",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(startInfo);
-                if (process == null) throw new InvalidOperationException("Falha ao iniciar pnputil.");
-
-                stdout = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(90000);
-                exitCode = process.ExitCode;
+                postInstallError = auditedDevice.ConfigManagerErrorCode;
             }
-            catch (Exception ex)
-            {
-                exitCode = -1;
-                stdout = ex.Message;
-            }
+        }
 
-            bool processSuccess = exitCode == 0 || exitCode == 3010;
-            uint postInstallError = 0;
+        // GATILHO DE REVERSÃO AUTOMÁTICA
+        if (!processSuccess || postInstallError != 0)
+        {
+            string reason = !processSuccess
+                ? installResult.TimedOut
+                    ? "Falha no processo pnputil (tempo limite excedido)"
+                    : $"Falha no processo pnputil (código {exitCode})"
+                : $"Dispositivo entrou em estado de erro (código PnP {postInstallError})";
 
-            if (processSuccess)
-            {
-                await Task.Delay(2500, cancellationToken);
-                var auditedDevice = await _inventoryService.GetDeviceByIdAsync(device.DeviceId, cancellationToken);
-                if (auditedDevice != null)
-                {
-                    postInstallError = auditedDevice.ConfigManagerErrorCode;
-                }
-            }
+            _logger.Error("FALHA NA INSTALAÇÃO: {Reason}. Disparando reversão automática...", reason);
 
-            // GATILHO DE REVERSÃO AUTOMÁTICA
-            if (!processSuccess || postInstallError != 0)
-            {
-                string reason = !processSuccess 
-                    ? $"Falha no processo pnputil (código {exitCode})" 
-                    : $"Dispositivo entrou em estado de erro (código PnP {postInstallError})";
+            // Dispara Toast 1 (Falha) ou Toast 4 (Erro PnP)
+            if (postInstallError != 0)
+                _notificationService.ShowDeviceInErrorToast(device.Name, postInstallError, reason);
+            else
+                _notificationService.ShowInstallationFailedToast(device.Name, reason);
 
-                _logger.Error("FALHA NA INSTALAÇÃO: {Reason}. Disparando reversão automática...", reason);
+            // Executa reversão automática
+            bool rollbackOk = await ExecuteRollbackProcessAsync(backup.PrimaryInfPath);
 
-                // Dispara Toast 1 (Falha) ou Toast 4 (Erro PnP)
-                if (postInstallError != 0)
-                    _notificationService.ShowDeviceInErrorToast(device.Name, postInstallError, reason);
-                else
-                    _notificationService.ShowInstallationFailedToast(device.Name, reason);
-
-                // Executa reversão automática
-                bool rollbackOk = await ExecuteRollbackProcessAsync(backup.PrimaryInfPath);
-
-                // Dispara Toast 2 (Reversão Executada)
-                _notificationService.ShowRollbackExecutedToast(device.Name, backup.DriverVersion, isAutomatic: true);
-
-                await _historyRepository.AddRecordAsync(new OperationHistoryRecord
-                {
-                    DeviceName = device.Name,
-                    HardwareId = device.PrimaryHardwareId,
-                    OperationType = "Instalação (Revertida Auto)",
-                    PreviousVersion = device.DriverVersion,
-                    NewVersion = candidate.NewVersion,
-                    Source = candidate.SourceName,
-                    ResultStatus = "Falha / Revertido",
-                    ErrorMessage = $"{reason}. Reversão automática: {(rollbackOk ? "Sucesso" : "Falhou")}.",
-                    IsSimulation = false
-                });
-
-                return InstallationResult.FailedAndRolledBack(exitCode, reason, postInstallError, rollbackOk);
-            }
-
-            bool needsReboot = exitCode == 3010;
-            string successMsg = needsReboot
-                ? "Driver instalado com sucesso! Reinicialização do computador é necessária."
-                : "Driver instalado com êxito e operando perfeitamente!";
+            // Dispara Toast 2 (Reversão Executada)
+            _notificationService.ShowRollbackExecutedToast(device.Name, backup.DriverVersion, isAutomatic: true);
 
             await _historyRepository.AddRecordAsync(new OperationHistoryRecord
             {
                 DeviceName = device.Name,
                 HardwareId = device.PrimaryHardwareId,
-                OperationType = "Instalação",
+                OperationType = "Instalação (Revertida Auto)",
                 PreviousVersion = device.DriverVersion,
                 NewVersion = candidate.NewVersion,
                 Source = candidate.SourceName,
-                ResultStatus = "Sucesso",
-                ErrorMessage = needsReboot ? "Reinicialização necessária" : string.Empty,
+                ResultStatus = "Falha / Revertido",
+                ErrorMessage = $"{reason}. Reversão automática: {(rollbackOk ? "Sucesso" : "Falhou")}.",
                 IsSimulation = false
             });
 
-            return InstallationResult.Ok(needsReboot, exitCode, successMsg);
-        }, cancellationToken);
+            return InstallationResult.FailedAndRolledBack(exitCode, reason, postInstallError, rollbackOk);
+        }
+
+        bool needsReboot = exitCode == 3010;
+        string successMsg = needsReboot
+            ? "Driver instalado com sucesso! Reinicialização do computador é necessária."
+            : "Driver instalado com êxito e operando perfeitamente!";
+
+        await _historyRepository.AddRecordAsync(new OperationHistoryRecord
+        {
+            DeviceName = device.Name,
+            HardwareId = device.PrimaryHardwareId,
+            OperationType = "Instalação",
+            PreviousVersion = device.DriverVersion,
+            NewVersion = candidate.NewVersion,
+            Source = candidate.SourceName,
+            ResultStatus = "Sucesso",
+            ErrorMessage = needsReboot ? "Reinicialização necessária" : string.Empty,
+            IsSimulation = false
+        });
+
+        return InstallationResult.Ok(needsReboot, exitCode, successMsg);
     }
 
-    private async Task<bool> ExecuteRollbackProcessAsync(string backupInfPath)
+    private static async Task<bool> ExecuteRollbackProcessAsync(string backupInfPath)
     {
-        return await Task.Run(() =>
+        try
         {
-            try
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "pnputil.exe",
-                    Arguments = $"/add-driver \"{backupInfPath}\" /install",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                using var process = Process.Start(startInfo);
-                if (process == null) return false;
-
-                process.WaitForExit(90000);
-                return process.ExitCode == 0 || process.ExitCode == 3010;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Erro fatal ao reverter.");
-                return false;
-            }
-        });
+            var result = await PnpUtilRunner.RunAsync($"/add-driver \"{backupInfPath}\" /install", 90000);
+            return result.ExitCode == 0 || result.ExitCode == 3010;
+        }
+        catch (Exception ex)
+        {
+            Log.ForContext<PnpUtilInstallerService>().Error(ex, "Erro fatal ao reverter.");
+            return false;
+        }
     }
 }

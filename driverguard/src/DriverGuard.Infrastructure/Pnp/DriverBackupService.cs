@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -47,41 +46,43 @@ public class DriverBackupService : IDriverBackupService
             };
         }
 
-        return await Task.Run(() =>
+        return await Task.Run(async () =>
         {
             try
             {
+                // Exporta somente o pacote do próprio dispositivo (oemNN.inf).
+                // Nunca usar "*": isso copiaria o DriverStore inteiro e tornaria a escolha do INF aleatória.
+                if (string.IsNullOrWhiteSpace(device.InfName) ||
+                    !device.InfName.StartsWith("oem", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.Error("Backup abortado para {Name}: nome publicado do driver ausente ou inválido ('{Inf}').", device.Name, device.InfName);
+                    return null;
+                }
+
                 Directory.CreateDirectory(targetDir);
 
-                string infTarget = !string.IsNullOrWhiteSpace(device.InfName) && device.InfName.StartsWith("oem", StringComparison.OrdinalIgnoreCase)
-                    ? device.InfName
-                    : "*";
+                _logger.Information("Executando pnputil /export-driver {Inf} '{Target}'...", device.InfName, targetDir);
 
-                _logger.Information("Executando pnputil /export-driver {Inf} '{Target}'...", infTarget, targetDir);
+                var result = await PnpUtilRunner.RunAsync($"/export-driver {device.InfName} \"{targetDir}\"", 30000);
 
-                var startInfo = new ProcessStartInfo
+                _logger.Information("pnputil /export-driver finalizado com código {Code}. Output: {Out}", result.ExitCode, result.StdOut.Trim());
+
+                if (result.TimedOut || result.ExitCode != 0)
                 {
-                    FileName = "pnputil.exe",
-                    Arguments = $"/export-driver {infTarget} \"{targetDir}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
+                    _logger.Error("pnputil /export-driver falhou (código {Code}, timeout: {Timeout}). Erro: {Err}",
+                        result.ExitCode, result.TimedOut, result.StdErr.Trim());
+                    return null;
+                }
 
-                using var process = Process.Start(startInfo);
-                if (process == null)
-                    throw new InvalidOperationException("Falha ao iniciar o processo pnputil.exe.");
-
-                string stdout = process.StandardOutput.ReadToEnd();
-                string stderr = process.StandardError.ReadToEnd();
-                process.WaitForExit(30000);
-
-                _logger.Information("pnputil /export-driver finalizado com código {Code}. Output: {Out}", process.ExitCode, stdout.Trim());
-
-                // Procura arquivo .inf dentro da pasta de destino exportada
+                // O pacote exportado deve conter exatamente um INF; se houver mais de um, a escolha seria ambígua
                 var exportedInfs = Directory.GetFiles(targetDir, "*.inf", SearchOption.AllDirectories);
-                string primaryInf = exportedInfs.Length > 0 ? exportedInfs[0] : Path.Combine(targetDir, device.InfName);
+                if (exportedInfs.Length != 1)
+                {
+                    _logger.Error("Backup inválido para {Name}: {Count} arquivos .inf exportados (esperado 1).", device.Name, exportedInfs.Length);
+                    return null;
+                }
+
+                string primaryInf = exportedInfs[0];
 
                 var backupInfo = new DriverBackupInfo
                 {

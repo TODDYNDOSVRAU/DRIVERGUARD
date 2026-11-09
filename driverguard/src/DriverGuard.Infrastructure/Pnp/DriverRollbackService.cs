@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using DriverGuard.Core.Interfaces;
 using DriverGuard.Core.Models;
 using Serilog;
@@ -85,61 +84,26 @@ public class DriverRollbackService : IDriverRollbackService
             return new InstallationResult { Success = false, Message = err };
         }
 
-        return await Task.Run(async () =>
+        _logger.Information("Iniciando reversão manual de {Dev} para versão {Ver}...", device.Name, backupInfo.DriverVersion);
+
+        var result = await PnpUtilRunner.RunAsync($"/add-driver \"{backupInfo.PrimaryInfPath}\" /install", 90000);
+        int exitCode = result.ExitCode;
+
+        bool success = exitCode == 0 || exitCode == 3010;
+        bool needsReboot = exitCode == 3010;
+
+        if (success)
         {
-            _logger.Information("Iniciando reversão manual de {Dev} para versão {Ver}...", device.Name, backupInfo.DriverVersion);
+            await Task.Delay(2000, cancellationToken);
+            var postDevice = await _inventoryService.GetDeviceByIdAsync(device.DeviceId, cancellationToken);
+            uint pnpError = postDevice?.ConfigManagerErrorCode ?? 0;
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "pnputil.exe",
-                Arguments = $"/add-driver \"{backupInfo.PrimaryInfPath}\" /install",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
+            string msg = needsReboot
+                ? $"Reversão concluída com sucesso para a versão {backupInfo.DriverVersion}. Reinicialização necessária."
+                : $"Reversão concluída com sucesso para a versão {backupInfo.DriverVersion}! O dispositivo está operacional.";
 
-            using var process = Process.Start(startInfo);
-            if (process == null) throw new InvalidOperationException("Falha ao iniciar pnputil.");
-
-            string stdout = process.StandardOutput.ReadToEnd();
-            process.WaitForExit(90000);
-            int exitCode = process.ExitCode;
-
-            bool success = exitCode == 0 || exitCode == 3010;
-            bool needsReboot = exitCode == 3010;
-
-            if (success)
-            {
-                await Task.Delay(2000, cancellationToken);
-                var postDevice = await _inventoryService.GetDeviceByIdAsync(device.DeviceId, cancellationToken);
-                uint pnpError = postDevice?.ConfigManagerErrorCode ?? 0;
-
-                string msg = needsReboot
-                    ? $"Reversão concluída com sucesso para a versão {backupInfo.DriverVersion}. Reinicialização necessária."
-                    : $"Reversão concluída com sucesso para a versão {backupInfo.DriverVersion}! O dispositivo está operacional.";
-
-                // Dispara Toast 2 (Reversão Executada)
-                _notificationService.ShowRollbackExecutedToast(device.Name, backupInfo.DriverVersion, isAutomatic: false);
-
-                await _historyRepository.AddRecordAsync(new OperationHistoryRecord
-                {
-                    DeviceName = device.Name,
-                    HardwareId = device.PrimaryHardwareId,
-                    OperationType = "Reversão Manual",
-                    PreviousVersion = device.DriverVersion,
-                    NewVersion = backupInfo.DriverVersion,
-                    Source = "Backup Local",
-                    ResultStatus = "Sucesso",
-                    ErrorMessage = needsReboot ? "Reinicialização pendente" : string.Empty,
-                    IsSimulation = false
-                });
-
-                return InstallationResult.Ok(needsReboot, exitCode, msg);
-            }
-
-            string failMsg = $"O pnputil falhou ao aplicar o driver anterior (código {exitCode}). Output: {stdout}";
-            _notificationService.ShowInstallationFailedToast(device.Name, failMsg);
+            // Dispara Toast 2 (Reversão Executada)
+            _notificationService.ShowRollbackExecutedToast(device.Name, backupInfo.DriverVersion, isAutomatic: false);
 
             await _historyRepository.AddRecordAsync(new OperationHistoryRecord
             {
@@ -149,17 +113,37 @@ public class DriverRollbackService : IDriverRollbackService
                 PreviousVersion = device.DriverVersion,
                 NewVersion = backupInfo.DriverVersion,
                 Source = "Backup Local",
-                ResultStatus = "Falha",
-                ErrorMessage = failMsg,
+                ResultStatus = "Sucesso",
+                ErrorMessage = needsReboot ? "Reinicialização pendente" : string.Empty,
                 IsSimulation = false
             });
 
-            return new InstallationResult
-            {
-                Success = false,
-                ExitCode = exitCode,
-                Message = failMsg
-            };
-        }, cancellationToken);
+            return InstallationResult.Ok(needsReboot, exitCode, msg);
+        }
+
+        string failMsg = result.TimedOut
+            ? "O pnputil excedeu o tempo limite ao aplicar o driver anterior e foi encerrado."
+            : $"O pnputil falhou ao aplicar o driver anterior (código {exitCode}). Output: {result.StdOut}{result.StdErr}";
+        _notificationService.ShowInstallationFailedToast(device.Name, failMsg);
+
+        await _historyRepository.AddRecordAsync(new OperationHistoryRecord
+        {
+            DeviceName = device.Name,
+            HardwareId = device.PrimaryHardwareId,
+            OperationType = "Reversão Manual",
+            PreviousVersion = device.DriverVersion,
+            NewVersion = backupInfo.DriverVersion,
+            Source = "Backup Local",
+            ResultStatus = "Falha",
+            ErrorMessage = failMsg,
+            IsSimulation = false
+        });
+
+        return new InstallationResult
+        {
+            Success = false,
+            ExitCode = exitCode,
+            Message = failMsg
+        };
     }
 }
