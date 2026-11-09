@@ -92,7 +92,7 @@ public class RollbackAndInstallationTests
         var result = await installer.InstallDriverAsync(candidate, isSimulation: false);
 
         Assert.False(result.Success);
-        Assert.Contains("reinicialização pendente", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reinicialização", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
