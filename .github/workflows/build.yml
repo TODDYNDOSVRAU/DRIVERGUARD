@@ -1,0 +1,46 @@
+name: Build DriverGuard Executable
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: driverguard
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore Dependencies
+        run: dotnet restore DriverGuard.sln
+
+      - name: Run Unit Tests
+        run: dotnet test tests/DriverGuard.Tests.Unit/DriverGuard.Tests.Unit.csproj -c Release --no-restore
+
+      - name: Publish Single-File Executable (.exe)
+        run: |
+          dotnet publish src/DriverGuard.UI/DriverGuard.UI.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o ./publish
+
+      - name: Upload DriverGuard.exe Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DriverGuard-Windows-x64
+          path: ./driverguard/publish/DriverGuard.exe
