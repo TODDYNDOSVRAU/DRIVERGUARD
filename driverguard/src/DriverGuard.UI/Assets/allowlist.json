@@ -1,0 +1,24 @@
+{
+  "TrustedPublishers": [
+    "Microsoft Corporation",
+    "Microsoft Windows Hardware Compatibility Publisher",
+    "Intel Corporation",
+    "NVIDIA Corporation",
+    "Advanced Micro Devices, Inc.",
+    "Realtek Semiconductor Corp.",
+    "Dell Inc.",
+    "Lenovo",
+    "HP Inc."
+  ],
+  "TrustedDomains": [
+    "microsoft.com",
+    "windowsupdate.com",
+    "intel.com",
+    "nvidia.com",
+    "amd.com",
+    "realtek.com",
+    "dell.com",
+    "lenovo.com",
+    "hp.com"
+  ]
+}

@@ -1,0 +1,52 @@
+<ui:FluentWindow x:Class="DriverGuard.UI.Views.Dialogs.RollbackDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Reversão de Driver — Versões Anteriores Disponíveis"
+        Height="540" Width="760"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Reversão para Versão Anterior" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock x:Name="TxtHeaderInfo" Text="Selecione um ponto de backup salvo pelo DriverGuard para restaurar o dispositivo à sua configuração anterior."
+                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Lista de Backups -->
+        <Border Grid.Row="1" Padding="12" Background="{DynamicResource CardBackground}" CornerRadius="8" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+            <DataGrid x:Name="GridBackups"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      Background="{DynamicResource CardBackground}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Data do Backup" Binding="{Binding FormattedBackupDate}" Width="150" FontWeight="SemiBold" />
+                    <DataGridTextColumn Header="Versão do Driver" Binding="{Binding DriverVersion}" Width="130" />
+                    <DataGridTextColumn Header="Data do Driver" Binding="{Binding FormattedDriverDate}" Width="110" />
+                    <DataGridTextColumn Header="Provedor" Binding="{Binding Provider}" Width="120" />
+                    <DataGridTextColumn Header="Pasta do Backup" Binding="{Binding BackupDirectory}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Footer com Botões -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <TextBlock x:Name="TxtEmptyNotice" Text="Nenhuma versão anterior encontrada no histórico deste dispositivo." VerticalAlignment="Center" FontSize="12" Foreground="#FFE65C00" Visibility="Collapsed" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="Fechar" Appearance="Subtle" Click="BtnClose_Click" Margin="0,0,8,0" />
+                <ui:Button x:Name="BtnRollback" Content="Reverter para Versão Selecionada" Appearance="Primary" Icon="ArrowUndo24" Click="BtnRollback_Click" FontWeight="Bold" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

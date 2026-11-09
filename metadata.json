@@ -1,0 +1,6 @@
+{
+  "name": "DriverGuard",
+  "description": "Aplicativo desktop seguro para auditoria, verificação e reversão de drivers no Windows 10/11 com .NET 8 e WPF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

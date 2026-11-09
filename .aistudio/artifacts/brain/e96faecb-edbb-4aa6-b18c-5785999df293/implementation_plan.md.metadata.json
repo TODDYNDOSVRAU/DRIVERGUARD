@@ -1,0 +1,6 @@
+{
+  "summary":  "Plano arquitetural e de implementação do DriverGuard (Etapa 0) em C# .NET 8 e WPF, contemplando inventário PnP via CIM, verificação segura com WinVerifyTrust, rollback resiliente com pnputil e interface Fluent Design com Wpf.Ui.",
+  "updatedAt":  "2026-11-09T17:28:51.816495409Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

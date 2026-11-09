@@ -1,0 +1,131 @@
+<ui:FluentWindow x:Class="DriverGuard.UI.Views.Dialogs.InstallConfirmDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Confirmação de Instalação Segura"
+        Height="640" Width="720"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Revisão de Pacote e Confirmação de Instalação" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="Confira os detalhes técnicos do driver antes de aplicar no sistema. O DriverGuard criará um ponto de restauração e exportará o driver atual para garantir reversibilidade atômica."
+                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Conteúdo do Driver -->
+        <Border Grid.Row="1" Padding="16" Background="{DynamicResource CardBackground}" CornerRadius="8" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Nome do Dispositivo -->
+                    <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}" Padding="12" CornerRadius="6" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Dispositivo Alvo:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock x:Name="TxtDeviceName" Text="NVIDIA GeForce RTX 4070" FontSize="14" FontWeight="Bold" Margin="0,2,0,0" />
+                            <TextBlock x:Name="TxtHardwareId" Text="PCI\VEN_10DE&amp;DEV_2782" FontSize="11" FontFamily="Consolas" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Comparativo de Versão e Data -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Atual -->
+                        <Border Grid.Column="0" Margin="0,0,6,0" Padding="10" Background="{DynamicResource SubtleFillColorSecondaryBrush}" CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock Text="VERSÃO ATUAL INSTALADA" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="TxtCurrentVersion" Text="31.0.15.5176" FontSize="13" Margin="0,4,0,0" FontWeight="SemiBold" />
+                                <TextBlock x:Name="TxtCurrentDate" Text="Data: 10/01/2024" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Nova -->
+                        <Border Grid.Column="1" Margin="6,0,0,0" Padding="10" Background="#1A00FF00" CornerRadius="6">
+                            <StackPanel>
+                                <TextBlock Text="NOVA VERSÃO HOMOLOGADA" FontSize="10" FontWeight="Bold" Foreground="#FF107C41" />
+                                <TextBlock x:Name="TxtNewVersion" Text="31.0.15.5186" FontSize="13" Margin="0,4,0,0" FontWeight="Bold" Foreground="#FF107C41" />
+                                <TextBlock x:Name="TxtNewDate" Text="Data: 15/03/2024" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Fornecedor, Fonte e Assinatura -->
+                    <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}" Padding="12" CornerRadius="6" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                <TextBlock Text="Fonte do Driver:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="TxtSource" Text="Microsoft Update Catalog (WUA)" FontWeight="SemiBold" FontSize="12" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                <TextBlock Text="Status da Assinatura Digital:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="TxtSignature" Text="Válida (WHQL Homologado)" FontWeight="Bold" Foreground="#FF107C41" FontSize="12" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="0">
+                                <TextBlock Text="Fornecedor do Pacote:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="TxtProvider" Text="NVIDIA" FontWeight="SemiBold" FontSize="12" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock Text="Tamanho Estimado:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock x:Name="TxtSize" Text="12.4 MB" FontWeight="SemiBold" FontSize="12" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Aviso de Risco Crítico (GPU, Rede, Armazenamento) -->
+                    <Border x:Name="BdrCriticalRisk" Background="#1AD83B01" BorderBrush="#FFE65C00" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,12" Visibility="Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <ui:SymbolIcon Symbol="Warning24" FontSize="18" Foreground="#FFE65C00" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Atenção: Dispositivo de Risco Crítico do Sistema" FontWeight="Bold" FontSize="12" Foreground="#FFE65C00" />
+                            </StackPanel>
+                            <TextBlock Text="Drivers de placa de vídeo, adaptadores de rede e controladores de barramento impactam diretamente a conectividade ou a exibição de tela. A instalação exige confirmação extra do usuário."
+                                       FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" />
+                            <CheckBox x:Name="ChkConfirmCritical" Content="Estou ciente dos riscos e confirmo a atualização deste dispositivo crítico." Margin="0,8,0,0" Checked="ChkConfirmCritical_Changed" Unchecked="ChkConfirmCritical_Changed" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Aviso de Restauração do Sistema (se throttled ou desativada) -->
+                    <Border x:Name="BdrRestoreWarning" Background="#1A0078D4" BorderBrush="#FF0078D4" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="ShieldCheckmark24" FontSize="18" Foreground="#FF0078D4" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtRestoreNotice"
+                                       Text="Garantia de Reversibilidade Atômica: O driver atual será exportado pelo DriverStore antes de qualquer alteração, permitindo reversão imediata caso ocorra qualquer instabilidade."
+                                       FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Footer com Botões -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="Cancelar" Appearance="Subtle" Click="BtnCancel_Click" Margin="0,0,8,0" />
+                <ui:Button x:Name="BtnInstall" Content="Confirmar e Instalar Driver" Appearance="Primary" Icon="ArrowDownload24" Click="BtnInstall_Click" FontWeight="Bold" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
