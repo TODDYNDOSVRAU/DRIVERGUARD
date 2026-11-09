@@ -76,7 +76,7 @@ DriverVer=03/15/2024,2.1.3.15
         };
 
         // Deve identificar que DEV_7A60 está contido ou corresponde
-        Assert.True(pkg.SupportedHardwareIds.Any(id => matchingDevice.HardwareIds[0].StartsWith(id)));
+        Assert.Contains(pkg.SupportedHardwareIds, id => matchingDevice.HardwareIds[0].StartsWith(id));
     }
 
     private class DummySignatureService : ISignatureVerificationService

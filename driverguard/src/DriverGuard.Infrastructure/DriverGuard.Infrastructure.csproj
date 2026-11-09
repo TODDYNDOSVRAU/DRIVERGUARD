@@ -16,7 +16,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Management.Infrastructure" Version="3.0.0" />
     <PackageReference Include="System.Management" Version="8.0.0" />
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <PackageReference Include="Serilog" Version="4.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
     <PackageReference Include="Dapper" Version="2.1.28" />
